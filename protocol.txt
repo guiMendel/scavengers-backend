@@ -1,0 +1,9 @@
+This file is a simple text specification of how communication between agents and this server should take place.
+Lines prefixed with > mean a message is sent by the agent, and < means the message is sent by the server.
+
+1. Connection is established
+2. > Agent identifies itself with a unique identification token
+3. Loop:
+    3.1. > Agent provides a state observation description
+    3.2. < An action description is returned
+    3.3. Loop breaks on connection interruption
