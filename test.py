@@ -2,6 +2,9 @@ import asyncio
 import websockets
 from datetime import datetime
 
+host = "localhost"
+port = 3001
+
 # Maps each agent id to it's websocket connection
 scavengers = {}
 
@@ -38,8 +41,8 @@ async def connection_handler(websocket):
 
 async def main():
     try:
-        async with websockets.serve(connection_handler, "localhost", 3001):
-            log("Server listening")
+        async with websockets.serve(connection_handler, host, port):
+            log(f"Server listening at {host}:{port}")
             await asyncio.Future()
     except KeyboardInterrupt:
         pass
