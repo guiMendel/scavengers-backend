@@ -14,7 +14,7 @@ def log(message):
     print(f"[{datetime.now().time()}]> {message}")
 
 
-# Handles a message. The returned stirng should be the response, unless it's null
+# Handles a message. The returned string should be the response, unless it's null
 def handle_message(message):
     # Identify message type
     if "connect" in message:
