@@ -1,18 +1,20 @@
 This file is a simple text specification of how communication between agents and this server should take place.
-Lines prefixed with > mean a message is sent by the agent, and < means the message is sent by the server.
+Lines prefixed with < mean a message is sent by the agent, and > means the message is sent by the server.
 
 1. Connection with gama app is established
-2. > Each agent identifies itself with a unique identification token
+2. < Each agent identifies itself with a unique identification token
 3. Loop for each agent:
-    3.1. > Agent provides a state observation description
-    3.2. < An action description is returned
-    3.3. Loop breaks on connection interruption
+    3.1. < Agent provides: a state observation description, reward from last action (if applicable), and whether is terminal state
+    3.2. > An action description is returned
+    Obs. Loop breaks on connection interruption
 
 =======================
     MESSAGE FORMAT
 =======================
 
-A scavenger's message must be a json string according to the following rules:
+=== SCAVENGER MESSAGE
+
+A scavenger's message must be a json according to the following rules:
 
 1. There must be a field called id which holds the scavenger's id
 
@@ -20,5 +22,17 @@ A scavenger's message must be a json string according to the following rules:
 
 3. On action request, the object must contain the "request" key holding true
 
+Example:
+
+{
+    "id": "Scav. 1",
+    "connect": true
+}
+
+=== API MESSAGE
+
 The api's response is a simple string that indicate's the action to be performed.
-    example: "idle"
+
+Example:
+
+"idle"

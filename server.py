@@ -16,12 +16,15 @@ def log(message):
 
 # Handles a message. The returned string should be the response, unless it's null
 def handle_message(message):
+    # Get agent id
+    id = message["id"]
+
     # Identify message type
     if "connect" in message:
-        log(f"{message['id']} connected")
+        log(f"{id} connected")
 
         # Register it
-        scavengers[message['id']] = {}
+        scavengers[id] = {}
 
     if "request" in message:
         return "random"
@@ -34,7 +37,7 @@ async def connection_handler(websocket):
     try:
         async for raw_message in websocket:
             message = json.loads(raw_message)
-            
+
             # log(f"Received message from {message['id']}: {message}")
             response = handle_message(message)
 
