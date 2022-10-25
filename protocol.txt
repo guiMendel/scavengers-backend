@@ -20,13 +20,31 @@ A scavenger's message must be a json according to the following rules:
 
 2. On connection, the json object must contain a "connect" key which holds true
 
-3. On action request, the object must contain the "request" key holding true
+3. On action request, the object must contain the "request" key holding an object with 2 to 3 items:
+    "state": holds a matrix representing the agent's observation
+    "reward": holds the reward of the last state-action execution (if not applicable, holds null)
+    "terminal": holds true if the current state is the terminal state (not included otherwise)
+    Obs. please refer to the simulation documentation in order to understand how the observation matrix is represented
 
-Example:
+Example 1:
 
 {
     "id": "Scav. 1",
     "connect": true
+}
+
+Example 2 (assuming observation matrix is 3x5):
+
+{
+    "id": "Scav. 3",
+    "request": {
+        "state": [
+            [2, 0, 1, 0, 3],
+            [0, 1, 1, 1, 3],
+            [0, 2, 4, 0, 3]
+        ],
+        "reward": 0
+    }
 }
 
 === API MESSAGE

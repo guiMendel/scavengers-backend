@@ -29,7 +29,8 @@ model.add(keras.layers.Dense(128, activation=tf.nn.relu))
 model.add(keras.layers.Dense(10, activation=tf.nn.softmax))
 
 # Compile it
-model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+model.compile(optimizer="adam", loss="sparse_categorical_crossentropy")
+# model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
 
 # Train it
 model.fit(x_train, y_train, epochs=3)

@@ -1,3 +1,5 @@
+from learning.agent import Agent
+
 # Built based on https://www.dominodatalab.com/blog/deep-reinforcement-learning
 
 # === HYPER PARAMETERS
@@ -10,4 +12,14 @@ action_size = 2
 
 # Training session parameters
 batch_size = 32
-n_episodes = 1000
+
+
+# Maps each action label to an index
+actions = [
+    "idle",
+    "move"
+]
+
+# Generate new agent
+def new_agent(id: str):
+    return Agent(id, state_size, action_size, batch_size)

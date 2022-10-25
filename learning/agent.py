@@ -7,10 +7,13 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 
+# Built based on https://www.dominodatalab.com/blog/deep-reinforcement-learning
+# Optimize with https://www.tensorflow.org/guide/gpu_performance_analysis
+
 # === PARAMETERS
 
 # Discount factor (used with bootstrapping)
-gama = 0.95
+gamma = 0.95
 
 # Exploration rate
 epsilon = 1.0
@@ -24,17 +27,19 @@ learning_rate = 0.001
 
 
 class Agent:
-    def _init_(self, id, state_size, action_size, batch_size):
+    def __init__(self, id, state_size, action_size, batch_size):
         self.id = id
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=2000)
-        self.gama = gama
+        self.gamma = gamma
         self.epsilon = epsilon
         self.epsilon_decay = epsilon_decay
         self.epsilon_min = epsilon_min
         self.learning_rate = learning_rate
         self.batch_size = batch_size
+
+        # Will memorize experiences
+        self.memory = {"states": deque(maxlen=2000), "actions": deque(maxlen=2000), "rewards": deque(maxlen=2000), "next_states": deque(maxlen=2000)}
 
         # These fields will store state-action pairs
         self.last_state = None
@@ -58,46 +63,67 @@ class Agent:
 
         # Compile it
         # According to the guide, "mean squared error is an appropriate choice of cost function when we use linear activation in the output layer"
-        self.model.compile(loss="mse", optimizer=Adam(lr=self.learning_rate))
+        self.model.compile(loss="mse", optimizer=Adam(learning_rate=self.learning_rate), metrics=["accuracy"])
 
     # Train the model based on random samples of memory
     def _train(self):
-        # Get a batch
-        minibatch = random.sample(self.memory, self.batch_size)
+        # Get indices for a batch
+        indices = random.sample(range(len(self.memory["states"])), self.batch_size)
 
-        # For each entry in batch
-        for state, action, reward, next_state, done in minibatch:
-            # Get the value for (state, action) based on this observation
-            target = reward
+        states = np.array(self.memory["states"])[indices]
+        actions = np.array(self.memory["actions"])[indices]
+        rewards = np.array(self.memory["rewards"])[indices]
+        next_states = np.array(self.memory["next_states"])[indices]
 
-            # TD(0) Bootstrap if not terminal state
-            if not done:
-                target = reward + self.gamma * np.amax(self.model.predict(next_state)[0])
+        # Get the value for (state, action) based on this observation
+        # TD(0) Bootstrap
+        next_state_values = self.model.predict(next_states, verbose=0)
 
-            # Get what the current prediction for this state is
-            target_f = self.model.predict(state)
+        targets = [rewards[index] + self.gamma * np.amax(next_state_values[index]) for index in range(self.batch_size)]
 
-            # Apply the observed target
-            target_f[0][action] = target
+        # Get what the current prediction for these states is
+        targets_f = self.model.predict(states, verbose=0)
 
-            # Fit to new observation
-            self.model.fit(state, target_f, epochs=1, verbose=0)
+        # Update the predicted target with the observed targets
+        for index in range(self.batch_size):
+            targets_f[index][actions[index]] = targets[index]
+
+        # Fit to new observation
+        self.model.fit(states, targets_f, epochs=1, verbose=0)
+
+        # validation_loss, validation_accuracy = self.model.evaluate(states, targets_f)
+
+        # print("Loss: ", validation_loss, "Accuracy: ", validation_accuracy)
 
         # Discount epsilon
         if self.epsilon > self.epsilon_min:
             self.epsilon_min *= self.epsilon_decay
 
+    # Registers the results from last action while getting the next action based on the new state
+    def iterate(self, step) -> int:
+        (state, reward, terminal) = (step["state"], step["reward"], "terminal" in step)
+
+        # If not terminal and stored state-action pair, register result
+        if not terminal and (self.last_state, self.last_action) != (None, None):
+            self.register_results(reward, state)
+
+        # Get new action
+        return self.action_for(state)
+
     # Get the action index best suited for this state
-    def action_for(self, state):
+    def action_for(self, state) -> int:
         # Store this state for later training
         self.last_state = state
+
+        # Reshape state
+        state = np.reshape(state, [1, self.state_size])
 
         # Random action chance
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
 
         # Get current action values
-        action_values = self.model.predict(state)
+        action_values = self.model.predict(state, verbose=0)
 
         # Get the one with best predicted return (and store it)
         self.last_action = np.argmax(action_values[0])
@@ -105,18 +131,23 @@ class Agent:
         return self.last_action
 
     # Register what the resulting state & reward was for last state-action encountered
-    def register_results(self, reward, next_state, done):
+    def register_results(self, reward, next_state):
         # Should have no store state-action pair
-        if (self.last_state, self.last_action) != (None, None):
+        if (self.last_state, self.last_action) == (None, None):
             raise Exception(f"Agent {self.id} tried registering results for state-action pair but the state-action pair was never registered")
 
-        self.memory.append((self.last_state, self.last_action, reward, next_state, done))
+        print("appending")
+        self.memory["states"].append(self.last_state)
+        self.memory["actions"].append(self.last_action)
+        self.memory["rewards"].append(reward)
+        self.memory["next_states"].append(next_state)
+        print("done")
 
         # Erase stored state-action pair
         (self.last_state, self.last_action) = (None, None)
 
         # Execute a training step
-        if len(self.memory) >= self.batch_size:
+        if len(self.memory["states"]) >= self.batch_size:
             self._train()
 
     # Saves the current model's parameters

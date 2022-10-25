@@ -2,12 +2,14 @@ import asyncio
 import websockets
 import json
 from datetime import datetime
+from learning.index import new_agent, actions
+from learning.agent import Agent
 
 host = "localhost"
 port = 3001
 
-# Maps each agent id to it's knowledge base
-scavengers = {}
+# Maps each agent id to it's Agent instance
+scavengers: "dict[str, Agent]" = {}
 
 # Helper to print with a timestamp
 def log(message):
@@ -17,17 +19,21 @@ def log(message):
 # Handles a message. The returned string should be the response, unless it's null
 def handle_message(message):
     # Get agent id
-    id = message["id"]
+    id: str = message["id"]
 
     # Identify message type
     if "connect" in message:
         log(f"{id} connected")
 
         # Register it
-        scavengers[id] = {}
+        scavengers[id] = new_agent(id)
 
     if "request" in message:
-        return "random"
+        # Input this state observation (and reward) into RL model and get next action
+        action_index: int = scavengers[id].iterate(message["request"])
+
+        # Translate this index directly into the corresponding action
+        return actions[action_index]
 
 
 async def connection_handler(websocket):
