@@ -4,22 +4,18 @@ from learning.agent import Agent
 
 # === HYPER PARAMETERS
 
-# Only agent's coordinates as state for now
-state_size = 2
-
-# Only actions "random_move" and "idle" for now
-action_size = 2
+# Size of agent's view range, in unit count
+state_size = 81
 
 # Training session parameters
 batch_size = 32
 
-
 # Maps each action label to an index
 actions = [
     "idle",
-    "move"
+    "move_ahead"
 ]
 
 # Generate new agent
 def new_agent(id: str):
-    return Agent(id, state_size, action_size, batch_size)
+    return Agent(id, state_size, len(actions), batch_size)

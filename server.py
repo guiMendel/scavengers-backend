@@ -1,4 +1,5 @@
 import asyncio
+from time import time
 import websockets
 import json
 from datetime import datetime
@@ -10,6 +11,9 @@ port = 3001
 
 # Maps each agent id to it's Agent instance
 scavengers: "dict[str, Agent]" = {}
+
+# Keeps count of the average response time
+serve_time: "dict[str, int]" = {}
 
 # Helper to print with a timestamp
 def log(message):
@@ -29,8 +33,17 @@ def handle_message(message):
         scavengers[id] = new_agent(id)
 
     if "request" in message:
+        # Track serve time
+        start = time()
+        
         # Input this state observation (and reward) into RL model and get next action
         action_index: int = scavengers[id].iterate(message["request"])
+
+        # Print serve time
+        serve_time["current"] = time() - start
+        log(f"Served request in {serve_time['current'] * 1000} ms")
+        serve_time["average"] = (serve_time["average"] + serve_time["current"]) / 2 \
+            if "average" in serve_time else serve_time["current"]
 
         # Translate this index directly into the corresponding action
         return actions[action_index]
@@ -56,6 +69,10 @@ async def connection_handler(websocket):
 
     finally:
         log("App disconnected")
+
+        if "average" in serve_time:
+            # Log average time
+            log(f"Average serve time was {serve_time['average'] * 1000} ms")
 
         # Unregister agents
         scavengers.clear()

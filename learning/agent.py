@@ -7,6 +7,9 @@ from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
 
+# Comment this to enable GPU usage
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 # Built based on https://www.dominodatalab.com/blog/deep-reinforcement-learning
 # Optimize with https://www.tensorflow.org/guide/gpu_performance_analysis
 
@@ -103,6 +106,11 @@ class Agent:
     def iterate(self, step) -> int:
         (state, reward, terminal) = (step["state"], step["reward"], "terminal" in step)
 
+
+
+        # Transform state from vision matrix to single line
+        state = np.reshape(state, [1, self.state_size]).tolist()
+
         # If not terminal and stored state-action pair, register result
         if not terminal and (self.last_state, self.last_action) != (None, None):
             self.register_results(reward, state)
@@ -136,12 +144,10 @@ class Agent:
         if (self.last_state, self.last_action) == (None, None):
             raise Exception(f"Agent {self.id} tried registering results for state-action pair but the state-action pair was never registered")
 
-        print("appending")
         self.memory["states"].append(self.last_state)
         self.memory["actions"].append(self.last_action)
         self.memory["rewards"].append(reward)
         self.memory["next_states"].append(next_state)
-        print("done")
 
         # Erase stored state-action pair
         (self.last_state, self.last_action) = (None, None)
