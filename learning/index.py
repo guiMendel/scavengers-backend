@@ -13,7 +13,12 @@ batch_size = 32
 # Maps each action label to an index
 actions = [
     "idle",
-    "move_ahead"
+    "move_ahead",
+    "move_right",
+    "move_left",
+    "move_back",
+    "face_right",
+    "face_left"
 ]
 
 # Generate new agent

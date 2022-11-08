@@ -6,6 +6,7 @@ from collections import deque
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.optimizers import Adam
+from time import time
 
 # Comment this to enable GPU usage
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -22,7 +23,7 @@ gamma = 0.95
 epsilon = 1.0
 # How much it decays each step
 epsilon_decay = 0.995
-# The lowest value it wil assume
+# The lowest value it will assume
 epsilon_min = 0.01
 
 # Learning rate of neural network
@@ -73,15 +74,15 @@ class Agent:
         # Get indices for a batch
         indices = random.sample(range(len(self.memory["states"])), self.batch_size)
 
-        states = np.array(self.memory["states"])[indices]
-        actions = np.array(self.memory["actions"])[indices]
-        rewards = np.array(self.memory["rewards"])[indices]
-        next_states = np.array(self.memory["next_states"])[indices]
+        states = np.reshape(np.array(self.memory["states"])[indices], [self.batch_size, -1])
+        actions = np.reshape(np.array(self.memory["actions"])[indices], [self.batch_size, -1])
+        rewards = np.reshape(np.array(self.memory["rewards"])[indices], [self.batch_size, -1])
+        next_states = np.reshape(np.array(self.memory["next_states"])[indices], [self.batch_size, -1])
 
         # Get the value for (state, action) based on this observation
-        # TD(0) Bootstrap
         next_state_values = self.model.predict(next_states, verbose=0)
 
+        # TD(0) Bootstrap
         targets = [rewards[index] + self.gamma * np.amax(next_state_values[index]) for index in range(self.batch_size)]
 
         # Get what the current prediction for these states is
@@ -91,8 +92,12 @@ class Agent:
         for index in range(self.batch_size):
             targets_f[index][actions[index]] = targets[index]
 
+        before = time()
+
         # Fit to new observation
         self.model.fit(states, targets_f, epochs=1, verbose=0)
+
+        print("Took", (time() - before) * 1000, "milliseconds")
 
         # validation_loss, validation_accuracy = self.model.evaluate(states, targets_f)
 
@@ -105,8 +110,6 @@ class Agent:
     # Registers the results from last action while getting the next action based on the new state
     def iterate(self, step) -> int:
         (state, reward, terminal) = (step["state"], step["reward"], "terminal" in step)
-
-
 
         # Transform state from vision matrix to single line
         state = np.reshape(state, [1, self.state_size]).tolist()
@@ -128,13 +131,14 @@ class Agent:
 
         # Random action chance
         if np.random.rand() <= self.epsilon:
-            return random.randrange(self.action_size)
+            self.last_action = random.randrange(self.action_size)
 
-        # Get current action values
-        action_values = self.model.predict(state, verbose=0)
+        else:
+            # Get current action values
+            action_values = self.model.predict(state, verbose=0)
 
-        # Get the one with best predicted return (and store it)
-        self.last_action = np.argmax(action_values[0])
+            # Get the one with best predicted return (and store it)
+            self.last_action = np.argmax(action_values[0])
 
         return self.last_action
 
