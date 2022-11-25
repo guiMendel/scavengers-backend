@@ -80,13 +80,21 @@ class Agent:
         next_states = np.reshape(np.array(self.memory["next_states"])[indices], [self.batch_size, -1])
 
         # Get the value for (state, action) based on this observation
+        before = time()
+        
         next_state_values = self.model.predict(next_states, verbose=0)
+
+        print("Predict 1 Took", (time() - before) * 1000, "milliseconds")
 
         # TD(0) Bootstrap
         targets = [rewards[index] + self.gamma * np.amax(next_state_values[index]) for index in range(self.batch_size)]
 
         # Get what the current prediction for these states is
+        before = time()
+
         targets_f = self.model.predict(states, verbose=0)
+
+        print("Predict 2 Took", (time() - before) * 1000, "milliseconds")
 
         # Update the predicted target with the observed targets
         for index in range(self.batch_size):
@@ -97,7 +105,7 @@ class Agent:
         # Fit to new observation
         self.model.fit(states, targets_f, epochs=1, verbose=0)
 
-        print("Took", (time() - before) * 1000, "milliseconds")
+        print("Fit Took", (time() - before) * 1000, "milliseconds")
 
         # validation_loss, validation_accuracy = self.model.evaluate(states, targets_f)
 
@@ -135,7 +143,11 @@ class Agent:
 
         else:
             # Get current action values
+            before = time()
+
             action_values = self.model.predict(state, verbose=0)
+
+            print("Other Predict Took", (time() - before) * 1000, "milliseconds")
 
             # Get the one with best predicted return (and store it)
             self.last_action = np.argmax(action_values[0])
