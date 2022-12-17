@@ -49,8 +49,8 @@ Example 2 (assuming observation matrix is 3x5):
 
 === API MESSAGE
 
-The api's response is a simple string that indicate's the action to be performed.
+The api's response is a simple string that indicates the target agent and the action to be performed, separated by a ';' character.
 
 Example:
 
-"idle"
+"Scav. 3;idle"

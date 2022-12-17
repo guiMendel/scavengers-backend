@@ -39,15 +39,17 @@ def handle_message(message):
         # Input this state observation (and reward) into RL model and get next action
         action_index: int = scavengers[id].iterate(message["request"])
 
+        # Get action
+        action = id + ';' + actions[action_index]
+
         # Print serve time
         serve_time["current"] = time() - start
-        log(f"Served \"{actions[action_index]}\" to request in {serve_time['current'] * 1000} ms")
+        log(f"Served \"{action}\" to \"{id}\" in {serve_time['current'] * 1000} ms")
         serve_time["average"] = (serve_time["average"] + serve_time["current"]) / 2 \
             if "average" in serve_time else serve_time["current"]
 
         # Translate this index directly into the corresponding action
-        return actions[action_index]
-
+        return action
 
 async def connection_handler(websocket):
     log("App connected")

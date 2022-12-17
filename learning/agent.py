@@ -1,33 +1,87 @@
 import random
 import os
 import numpy as np
-import tensorflow as tf
 from collections import deque
-from keras.models import Sequential
-from keras.layers import Dense
-from keras.optimizers import Adam
 from time import time
+import torch
+from pprint import pprint
+from torch import nn
+
 
 # Comment this to enable GPU usage
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 # Built based on https://www.dominodatalab.com/blog/deep-reinforcement-learning
-# Optimize with https://www.tensorflow.org/guide/gpu_performance_analysis
 
 # === PARAMETERS
 
 # Discount factor (used with bootstrapping)
-gamma = 0.95
+gamma = 0.99
 
 # Exploration rate
 epsilon = 1.0
 # How much it decays each step
 epsilon_decay = 0.995
 # The lowest value it will assume
-epsilon_min = 0.01
+epsilon_min = 0.1
 
 # Learning rate of neural network
 learning_rate = 0.001
+
+# Get device for training
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"Using {device} device")
+
+# https://pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html
+# https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html
+# https://pytorch.org/tutorials/beginner/blitz/neural_networks_tutorial.html
+class NeuralNetwork(nn.Module):
+    def __init__(self, state_size, action_size, batch_size):
+        super(NeuralNetwork, self).__init__()
+
+        self.state_size = state_size
+        self.action_size = action_size
+        self.batch_size = batch_size
+
+        # Function to flatten input data
+        self.flatten = nn.Flatten()
+
+        # Layer stacks
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(self.state_size, 32),
+            nn.ReLU(),
+            nn.Linear(32, 32),
+            nn.ReLU(),
+            nn.Linear(32, action_size),
+            # nn.Softmax(dim=1)
+        )
+
+        # Function to use for loss computation
+        self.get_loss = nn.CrossEntropyLoss()
+
+        # Get optimizer
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+
+    def forward(self, x):
+        x = torch.from_numpy(x).to(torch.float32)
+        x = self.flatten(x)
+
+        return self.linear_relu_stack(x)
+
+    def train_batch(self, x, y):
+        # Get prediction
+        prediction = self(x)
+
+        # Get loss
+        y = torch.from_numpy(y).to(torch.float32)
+        loss = self.get_loss(prediction, y)
+
+        # Backpropagation
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step() 
+
+
 
 
 class Agent:
@@ -55,19 +109,7 @@ class Agent:
     # Mounts and returns the keras model of this agent
     def _build_model(self):
         # Create new model
-        self.model = Sequential()
-
-        # Add first hidden layer
-        self.model.add(Dense(32, activation=tf.nn.relu, input_dim=self.state_size))
-        # Add another hidden layer
-        self.model.add(Dense(32, activation=tf.nn.relu))
-
-        # Output layer (output the z values directly from the neurons with the "linear" activation)
-        self.model.add(Dense(self.action_size, activation="linear"))
-
-        # Compile it
-        # According to the guide, "mean squared error is an appropriate choice of cost function when we use linear activation in the output layer"
-        self.model.compile(loss="mse", optimizer=Adam(learning_rate=self.learning_rate), metrics=["accuracy"])
+        self.model = NeuralNetwork(self.state_size, self.action_size, self.batch_size)
 
     # Train the model based on random samples of memory
     def _train(self):
@@ -82,9 +124,9 @@ class Agent:
         # Get the value for (state, action) based on this observation
         before = time()
         
-        next_state_values = self.model.predict(next_states, verbose=0)
+        next_state_values = self.model(next_states).detach().numpy()
 
-        print("Predict 1 Took", (time() - before) * 1000, "milliseconds")
+        # print("Predict 1 Took", (time() - before) * 1000, "milliseconds")
 
         # TD(0) Bootstrap
         targets = [rewards[index] + self.gamma * np.amax(next_state_values[index]) for index in range(self.batch_size)]
@@ -92,9 +134,9 @@ class Agent:
         # Get what the current prediction for these states is
         before = time()
 
-        targets_f = self.model.predict(states, verbose=0)
+        targets_f = self.model(states).detach().numpy()
 
-        print("Predict 2 Took", (time() - before) * 1000, "milliseconds")
+        # print("Predict 2 Took", (time() - before) * 1000, "milliseconds")
 
         # Update the predicted target with the observed targets
         for index in range(self.batch_size):
@@ -103,9 +145,9 @@ class Agent:
         before = time()
 
         # Fit to new observation
-        self.model.fit(states, targets_f, epochs=1, verbose=0)
+        self.model.train_batch(states, targets_f)
 
-        print("Fit Took", (time() - before) * 1000, "milliseconds")
+        # print("Train Took", (time() - before) * 1000, "milliseconds")
 
         # validation_loss, validation_accuracy = self.model.evaluate(states, targets_f)
 
@@ -113,11 +155,16 @@ class Agent:
 
         # Discount epsilon
         if self.epsilon > self.epsilon_min:
-            self.epsilon_min *= self.epsilon_decay
+            self.epsilon *= self.epsilon_decay
+
+            if self.epsilon < self.epsilon_min:
+                self.epsilon = self.epsilon_min
 
     # Registers the results from last action while getting the next action based on the new state
     def iterate(self, step) -> int:
         (state, reward, terminal) = (step["state"], step["reward"], "terminal" in step)
+
+        # pprint(state)
 
         # Transform state from vision matrix to single line
         state = np.reshape(state, [1, self.state_size]).tolist()
@@ -142,15 +189,16 @@ class Agent:
             self.last_action = random.randrange(self.action_size)
 
         else:
+            print("From neural network")
             # Get current action values
             before = time()
 
-            action_values = self.model.predict(state, verbose=0)
+            action_values = self.model(state)
 
-            print("Other Predict Took", (time() - before) * 1000, "milliseconds")
+            # print("Other Predict Took", (time() - before) * 1000, "milliseconds")
 
             # Get the one with best predicted return (and store it)
-            self.last_action = np.argmax(action_values[0])
+            self.last_action = np.argmax(action_values.detach().numpy()[0])
 
         return self.last_action
 

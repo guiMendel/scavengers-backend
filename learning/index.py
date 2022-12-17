@@ -5,7 +5,7 @@ from learning.agent import Agent
 # === HYPER PARAMETERS
 
 # Size of agent's view range, in unit count
-state_size = 81
+state_size = 21 * 11
 
 # Training session parameters
 batch_size = 32
@@ -13,6 +13,7 @@ batch_size = 32
 # Maps each action label to an index
 actions = [
     "idle",
+    "tag",
     "move_ahead",
     "move_right",
     "move_left",
