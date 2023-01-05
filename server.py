@@ -15,6 +15,9 @@ scavengers: "dict[str, Agent]" = {}
 # Keeps count of the average response time
 serve_time: "dict[str, int]" = {}
 
+# Keeps tab on current loaded scenario
+scenario: str = None
+
 # Helper to print with a timestamp
 def log(message):
     print(f"[{datetime.now().time()}]> {message}")
@@ -22,6 +25,15 @@ def log(message):
 
 # Handles a message. The returned string should be the response, unless it's null
 def handle_message(message):
+    # Get scenario message
+    if "scenario" in message:
+        global scenario
+        scenario = message["scenario"]
+
+        log(f"Using scenario {scenario}")
+
+        return
+    
     # Get agent id
     id: str = message["id"]
 
@@ -29,8 +41,14 @@ def handle_message(message):
     if "connect" in message:
         log(f"{id} connected")
 
+        # Ensure a scenario was provided
+        if scenario is None:
+            raise RuntimeError("No scenario was provided")
+
         # Register it
-        scavengers[id] = new_agent(id)
+        scavengers[id] = new_agent(id, scenario)
+
+        return
 
     if "request" in message:
         # Track serve time
@@ -72,9 +90,16 @@ async def connection_handler(websocket):
     finally:
         log("App disconnected")
 
+        global scenario
+        scenario = None
+
         if "average" in serve_time:
             # Log average time
             log(f"Average serve time was {serve_time['average'] * 1000} ms")
+
+        # Save models
+        for scavenger in scavengers.values():
+            scavenger.save_model()
 
         # Unregister agents
         scavengers.clear()

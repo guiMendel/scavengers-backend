@@ -23,5 +23,5 @@ actions = [
 ]
 
 # Generate new agent
-def new_agent(id: str):
-    return Agent(id, state_size, len(actions), batch_size)
+def new_agent(id: str, model_name: str):
+    return Agent(id, state_size, len(actions), batch_size, model_name)

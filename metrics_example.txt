@@ -1,0 +1,47 @@
+Scenario:
+
+N = 3 (3 agents)
+
+T = 10 (10 cycles in this episode)
+
+Agent reward sequences:
+  1 = {0, 0, 0, 0, 0, 1, 0, 1, 0, 0}, R1 = 2
+  2 = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1}, R2 = 4
+  3 = {0, 1, 0, 1, 1, 0, 0, 0, 0, 0}, R3 = 3
+
+Agent time-out sequences:
+  1 = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1}
+  2 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+  3 = {0, 0, 0, 0, 0, 0, 1, 1, 1, 1}
+
+Metric calculations:
+
+
+Utilitarian Metric (U):
+  sum(Ri) = 2 + 4 + 3 = 9
+  sum(Ri) / T = 9 / 10 = 0.9
+  E[sum(Ri) / T] = E[0.9] = ?
+> ?
+
+Equality (E):
+  sum(|Ri - Rj|) = |2 - 2| + |2 - 4| + |2 - 3| + |4 - 2| + |4 - 4| + |4 - 3| + |3 - 2| + |3 - 4| + |3 - 3|
+                 = 0 + 2 + 1 + 2 + 0 + 1 + 1 + 1 + 0
+                 = 8
+  2 * N * sum(Ri) = 2 * 3 * 9 = 54
+  1 - (sum(|Ri - Rj|) / (2 * N * sum(Ri))) = 1 - (8 / 54) = 0.8519
+> 0.8519
+
+Sustainability (S):
+  t1 = E[{6, 8}] = 7
+  t2 = E[{7, 8, 9, 10}] = 8.5
+  t1 = E[{2, 4, 5}] = 3.667
+  sum(ti) / N = (7 + 8.5 + 3.667) / 3 = 6.389
+  E[sum(ti) / N] = E[6.389] = ?
+> ?
+
+Peace (P):
+  sum(I(o_t^i)) = 2 + 0 + 4 = 6
+  N * T - sum(I(o_t^i)) = 30 - 6 = 24
+  E[N * T - sum(I(o_t^i))] = E[24] = ?
+  (E[N * T - sum(I(o_t^i))]) / T = ? / 10
+> ?

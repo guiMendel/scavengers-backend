@@ -2,15 +2,23 @@ This file is a simple text specification of how communication between agents and
 Lines prefixed with < mean a message is sent by the agent, and > means the message is sent by the server.
 
 1. Connection with gama app is established
-2. < Each agent identifies itself with a unique identification token
-3. Loop for each agent:
-    3.1. < Agent provides: a state observation description, reward from last action (if applicable), and whether is terminal state
-    3.2. > An action description is returned
+2. < Global species states current scenario
+3. < Each agent identifies itself with a unique identification token
+4. Loop for each agent:
+    4.1. < Agent provides: a state observation description, reward from last action (if applicable), and whether is terminal state
+    4.2. > An action description is returned
     Obs. Loop breaks on connection interruption
 
 =======================
     MESSAGE FORMAT
 =======================
+
+=== GLOBAL SPECIES MESSAGE
+
+It's always a scenario identification message, following this format:
+{
+    "scenario": <scenario-name>
+}
 
 === SCAVENGER MESSAGE
 

@@ -85,7 +85,7 @@ class NeuralNetwork(nn.Module):
 
 
 class Agent:
-    def __init__(self, id, state_size, action_size, batch_size):
+    def __init__(self, id, state_size, action_size, batch_size, model_name):
         self.id = id
         self.state_size = state_size
         self.action_size = action_size
@@ -95,6 +95,7 @@ class Agent:
         self.epsilon_min = epsilon_min
         self.learning_rate = learning_rate
         self.batch_size = batch_size
+        self.model_name = model_name
 
         # Will memorize experiences
         self.memory = {"states": deque(maxlen=2000), "actions": deque(maxlen=2000), "rewards": deque(maxlen=2000), "next_states": deque(maxlen=2000)}
@@ -105,6 +106,14 @@ class Agent:
 
         # Start the model
         self._build_model()
+
+        # Load it's params
+        try:
+            self.model.load_state_dict(torch.load(self._get_path()))
+        except (FileNotFoundError):
+            print(f"{self.id} had no stored model")
+            pass
+
 
     # Mounts and returns the keras model of this agent
     def _build_model(self):
@@ -160,6 +169,10 @@ class Agent:
             if self.epsilon < self.epsilon_min:
                 self.epsilon = self.epsilon_min
 
+    # Gets a model path from a model name
+    def _get_path(self):
+        return f"saved_models/{self.model_name}::{self.id}.pt"
+
     # Registers the results from last action while getting the next action based on the new state
     def iterate(self, step) -> int:
         (state, reward, terminal) = (step["state"], step["reward"], "terminal" in step)
@@ -189,7 +202,6 @@ class Agent:
             self.last_action = random.randrange(self.action_size)
 
         else:
-            print("From neural network")
             # Get current action values
             before = time()
 
@@ -222,4 +234,4 @@ class Agent:
 
     # Saves the current model's parameters
     def save_model(self):
-        self.model.save_weights(f"{id}.model")
+        torch.save(self.model.state_dict(), self._get_path())
