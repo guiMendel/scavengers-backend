@@ -6,6 +6,7 @@ from time import time
 import torch
 from pprint import pprint
 from torch import nn
+from time import time
 
 
 # Comment this to enable GPU usage
@@ -86,6 +87,7 @@ class NeuralNetwork(nn.Module):
 
 class Agent:
     def __init__(self, id, state_size, action_size, batch_size, model_name):
+        self.birth_time = time()
         self.id = id
         self.state_size = state_size
         self.action_size = action_size
@@ -114,6 +116,10 @@ class Agent:
             print(f"{self.id} had no stored model")
             pass
 
+    # Save model on destruction
+    def __del__(self):
+        print(self.id + " saving it's model and exiting. Total lifetime: " + time() - self.birth_time + " seconds")
+        self.save_model()
 
     # Mounts and returns the keras model of this agent
     def _build_model(self):

@@ -39,14 +39,18 @@ def handle_message(message):
 
     # Identify message type
     if "connect" in message:
-        log(f"{id} connected")
-
         # Ensure a scenario was provided
         if scenario is None:
             raise RuntimeError("No scenario was provided")
 
+        # If it's overriding another agent, delete the old one first
+        if id in scavengers:
+            scavengers.pop(id)
+
         # Register it
         scavengers[id] = new_agent(id, scenario)
+
+        log(f"{id} connected")
 
         return
 
@@ -96,10 +100,6 @@ async def connection_handler(websocket):
         if "average" in serve_time:
             # Log average time
             log(f"Average serve time was {serve_time['average'] * 1000} ms")
-
-        # Save models
-        for scavenger in scavengers.values():
-            scavenger.save_model()
 
         # Unregister agents
         scavengers.clear()
