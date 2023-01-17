@@ -4,8 +4,8 @@ from learning.agent import Agent
 
 # === HYPER PARAMETERS
 
-# Size of agent's view range, in unit count
-state_size = 21 * 11
+# Size of agent's view range, in unit count (breadth * range * channels of vision)
+state_size = 21 * 20 * 3
 
 # Training session parameters
 batch_size = 32
