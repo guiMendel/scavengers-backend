@@ -118,7 +118,7 @@ class Agent:
 
     # Save model on destruction
     def __del__(self):
-        print(self.id + " saving it's model and exiting. Total lifetime: " + time() - self.birth_time + " seconds")
+        print(f"{self.id} saving it's model and exiting. Total lifetime: {time() - self.birth_time} seconds")
         self.save_model()
 
     # Mounts and returns the keras model of this agent

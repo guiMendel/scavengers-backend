@@ -66,7 +66,7 @@ def handle_message(message):
 
         # Print serve time
         serve_time["current"] = time() - start
-        log(f"Served \"{action}\" to \"{id}\" in {serve_time['current'] * 1000} ms")
+        # log(f"Served \"{action}\" to \"{id}\" in {serve_time['current'] * 1000} ms")
         serve_time["average"] = (serve_time["average"] + serve_time["current"]) / 2 \
             if "average" in serve_time else serve_time["current"]
 
