@@ -7,6 +7,7 @@ import torch
 from pprint import pprint
 from torch import nn
 from time import time
+import json
 
 
 # Comment this to enable GPU usage
@@ -37,10 +38,10 @@ print(f"Using {device} device")
 # https://pytorch.org/tutorials/beginner/basics/optimization_tutorial.html
 # https://pytorch.org/tutorials/beginner/blitz/neural_networks_tutorial.html
 class NeuralNetwork(nn.Module):
-    def __init__(self, state_size, action_size, batch_size):
+    def __init__(self, state_shape, action_size, batch_size):
         super(NeuralNetwork, self).__init__()
 
-        self.state_size = state_size
+        self.state_shape = state_shape
         self.action_size = action_size
         self.batch_size = batch_size
 
@@ -49,10 +50,17 @@ class NeuralNetwork(nn.Module):
 
         # Layer stacks
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(self.state_size, 32),
+            nn.Conv2d(3, 16, 5, 1, "same"),
+            nn.MaxPool2d(5, 3),
+
+            nn.Conv2d(16, 32, 3, 1, "same"),
+            nn.MaxPool2d(4, 2),
+
+            nn.Flatten(),
+            
+            nn.Linear(128, 32),
             nn.ReLU(),
-            nn.Linear(32, 32),
-            nn.ReLU(),
+
             nn.Linear(32, action_size),
             # nn.Softmax(dim=1)
         )
@@ -65,7 +73,6 @@ class NeuralNetwork(nn.Module):
 
     def forward(self, x):
         x = torch.from_numpy(x).to(torch.float32)
-        x = self.flatten(x)
 
         return self.linear_relu_stack(x)
 
@@ -86,10 +93,10 @@ class NeuralNetwork(nn.Module):
 
 
 class Agent:
-    def __init__(self, id, state_size, action_size, batch_size, model_name):
+    def __init__(self, id, state_shape, action_size, batch_size, model_name):
         self.birth_time = time()
         self.id = id
-        self.state_size = state_size
+        self.state_shape = state_shape
         self.action_size = action_size
         self.gamma = gamma
         self.epsilon = epsilon
@@ -98,6 +105,7 @@ class Agent:
         self.learning_rate = learning_rate
         self.batch_size = batch_size
         self.model_name = model_name
+        self.state_shape_for = lambda size: [size, state_shape[0], state_shape[1], state_shape[2]]
 
         # Will memorize experiences
         self.memory = {"states": deque(maxlen=2000), "actions": deque(maxlen=2000), "rewards": deque(maxlen=2000), "next_states": deque(maxlen=2000)}
@@ -120,21 +128,22 @@ class Agent:
     def __del__(self):
         print(f"{self.id} saving it's model and exiting. Total lifetime: {time() - self.birth_time} seconds")
         self.save_model()
+        # pass
 
     # Mounts and returns the keras model of this agent
     def _build_model(self):
         # Create new model
-        self.model = NeuralNetwork(self.state_size, self.action_size, self.batch_size)
+        self.model = NeuralNetwork(self.state_shape, self.action_size, self.batch_size)
 
     # Train the model based on random samples of memory
     def _train(self):
         # Get indices for a batch
         indices = random.sample(range(len(self.memory["states"])), self.batch_size)
 
-        states = np.reshape(np.array(self.memory["states"])[indices], [self.batch_size, -1])
+        states = np.reshape(np.array(self.memory["states"])[indices], self.state_shape_for(self.batch_size))
         actions = np.reshape(np.array(self.memory["actions"])[indices], [self.batch_size, -1])
         rewards = np.reshape(np.array(self.memory["rewards"])[indices], [self.batch_size, -1])
-        next_states = np.reshape(np.array(self.memory["next_states"])[indices], [self.batch_size, -1])
+        next_states = np.reshape(np.array(self.memory["next_states"])[indices], self.state_shape_for(self.batch_size))
 
         # Get the value for (state, action) based on this observation
         before = time()
@@ -183,10 +192,14 @@ class Agent:
     def iterate(self, step) -> int:
         (state, reward, terminal) = (step["state"], step["reward"], "terminal" in step)
 
-        # pprint(state)
+        # if reward != 0:
+        #     print(f"Got a reward: {reward}!")
+
+        # with open("vision.json", 'w') as otp:
+        #     otp.write(json.dumps(state))
 
         # Transform state from vision matrix to single line
-        state = np.reshape(state, [1, self.state_size]).tolist()
+        state = np.reshape(state, self.state_shape_for(1)).tolist()
 
         # If not terminal and stored state-action pair, register result
         if not terminal and (self.last_state, self.last_action) != (None, None):
@@ -201,7 +214,7 @@ class Agent:
         self.last_state = state
 
         # Reshape state
-        state = np.reshape(state, [1, self.state_size])
+        state = np.reshape(state, self.state_shape_for(1))
 
         # Random action chance
         if np.random.rand() <= self.epsilon:

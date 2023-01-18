@@ -5,7 +5,7 @@ from learning.agent import Agent
 # === HYPER PARAMETERS
 
 # Size of agent's view range, in unit count (breadth * range * channels of vision)
-state_size = 21 * 20 * 3
+state_shape = (3, 21, 21)
 
 # Training session parameters
 batch_size = 32
@@ -24,4 +24,4 @@ actions = [
 
 # Generate new agent
 def new_agent(id: str, model_name: str):
-    return Agent(id, state_size, len(actions), batch_size, model_name)
+    return Agent(id, state_shape, len(actions), batch_size, model_name)
